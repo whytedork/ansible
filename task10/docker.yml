@@ -1,0 +1,79 @@
+- hosts: all
+  vars:
+          - repo_mount_path: "/dvd"
+  tasks:
+          - file:
+               state: directory
+               path: "/dvd"
+
+          - mount:
+              src: "/dev/cdrom"
+              path: "/dvd"
+              state: mounted
+              fstype: "iso9660"
+
+          - name: Mount the ISO file permanently
+            lineinfile:
+                    dest: /etc/rc.d/rc.local
+                    line: mount /dev/cdrom /dvd
+                    state: present
+                    create: yes
+
+          - name: Make the file(/etc/rc.d/rc.local) executable
+            command: chmod +x /etc/rc.d/rc.local
+
+          - name: Add repository
+            yum_repository:
+                    name: "app"
+                    description: AppStream repository
+                    baseurl: "file://{{repo_mount_path}}/AppStream"
+                    enabled: yes
+                    gpgcheck: no
+
+          - name: Add repository
+            yum_repository:
+                    name: "base"
+                    description: BaseOS repository
+                    baseurl: "file://{{repo_mount_path}}/BaseOS"
+                    enabled: yes
+                    gpgcheck: no
+
+          - name: Add_docker_repository
+            yum_repository:
+                    name: "docker"
+                    description: Docker repo
+                    baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable/"
+                    gpgcheck: no
+
+          - name: Install Docker
+            package:
+                    name: "docker-ce-3:18.09.1-3.el7.x86_64"
+                    state: present
+
+          - name: Start the Docker service
+            service:
+                    name: "docker"
+                    state: started
+
+          - pip:
+                  name: docker
+
+          - name: Pull the httpd Docker Image from dockerhub
+            docker_image:
+                    name: "httpd"
+                    source: pull
+
+          - name: Copy webpage from C.N. to M.N.
+            copy:
+                    src: "/root/arth-ws/my.html"
+                    dest: "/home"
+
+          - name: Container creation
+            docker_container:
+                    name: webos
+                    image: httpd
+                    state: started
+                    ports:
+                            - "7000:80"
+                    volumes:
+                            - /home:/usr/local/apache2/htdocs/
