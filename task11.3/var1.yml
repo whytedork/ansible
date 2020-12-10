@@ -1,0 +1,3 @@
+doc_root: "/var/www/hemant"
+dvd_dir: "/dvd"
+http_port: 8090
